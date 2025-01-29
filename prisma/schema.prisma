@@ -1,0 +1,238 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// USER MODELS
+
+model User {
+  id          Int          @id @default(autoincrement())
+  username    String       @unique
+  email       String       @unique
+  password    String
+  role        Role         @relation(fields: [roleId], references: [id])
+  roleId      Int
+  token       Token[]
+  userProfile UserProfile?
+
+  project            Project[]
+  discussion         Discussion[]
+  favoriteProject    FavoriteProject[]
+  favoriteDiscussion FavoriteDiscussion[]
+  userComment        UserComment[]
+}
+
+model Role {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  users User[]
+}
+
+model Token {
+  token     String   @unique
+  exp       DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int
+  userAgent String
+}
+
+model UserProfile {
+  id       Int    @id @default(autoincrement())
+  name     String
+  bio      String
+  company  String
+  location String
+  image    String
+
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int  @unique
+
+  userSocials UserSocials[]
+}
+
+model UserSocials {
+  id       Int    @id @default(autoincrement())
+  link     String
+  resource String
+
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id], onDelete: Cascade)
+  userProfileId Int
+}
+
+// PROJECT MODELS
+
+model Project {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String
+  date        DateTime
+
+  projectFiles ProjectFiles[]
+
+  projectType   ProjectType @relation(fields: [projectTypeId], references: [id])
+  projectTypeId Int
+
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId          Int
+  favoriteProject FavoriteProject[]
+  projectComment  ProjectComment[]
+  projectTags     ProjectTags[]
+}
+
+model ProjectType {
+  id   Int    @id @default(autoincrement())
+  type String
+
+  project Project[]
+}
+
+model ProjectFiles {
+  id   Int    @id @default(autoincrement())
+  file String
+  name String
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId Int
+}
+
+model FavoriteProject {
+  id Int @id @default(autoincrement())
+
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId Int
+}
+
+model ProjectComment {
+  id Int @id @default(autoincrement())
+
+  userComment   UserComment @relation(fields: [userCommentId], references: [id])
+  userCommentId Int         @unique
+
+  project            Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId          Int
+  projectCommentFork ProjectCommentFork[]
+}
+
+// DISCUSSIONS MODELS
+
+model Discussion {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String
+  date        DateTime
+
+  discussionFiles DiscussionFiles[]
+
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int
+
+  favoriteDiscussion FavoriteDiscussion[]
+  discussionComment  DiscussionComment[]
+  discussionTags     DiscussionTags[]
+}
+
+model DiscussionFiles {
+  id   Int    @id @default(autoincrement())
+  file String
+  name String
+
+  discussion   Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+  discussionId Int
+}
+
+model FavoriteDiscussion {
+  id Int @id @default(autoincrement())
+
+  user   User @relation(fields: [userId], references: [id])
+  userId Int
+
+  discussion   Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+  discussionId Int
+}
+
+model DiscussionComment {
+  id Int @id @default(autoincrement())
+
+  userComment   UserComment @relation(fields: [userCommentId], references: [id])
+  userCommentId Int         @unique
+
+  discussion            Discussion              @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+  discussionId          Int
+  discussionCommentFork DiscussionCommentFork[]
+}
+
+/// TAGS
+
+model Tag {
+  id   Int    @id @default(autoincrement())
+  name String
+
+  ProjectTags    ProjectTags[]
+  discussionTags DiscussionTags[]
+}
+
+model ProjectTags {
+  id Int @id @default(autoincrement())
+
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId Int
+
+  tag   Tag @relation(fields: [tagId], references: [id])
+  tagId Int
+}
+
+model DiscussionTags {
+  id Int @id @default(autoincrement())
+
+  discussion   Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+  discussionId Int
+
+  tag   Tag @relation(fields: [tagId], references: [id])
+  tagId Int
+}
+
+/// COMMENTS
+
+model UserComment {
+  id       Int      @id @default(autoincrement())
+  comment  String
+  dateTime DateTime
+
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int
+
+  projectComment        ProjectComment?
+  discussionComment     DiscussionComment?
+  discussionCommentFork DiscussionCommentFork?
+  projectCommentFork    ProjectCommentFork?
+}
+
+model DiscussionCommentFork {
+  id Int @id @default(autoincrement())
+
+  discussionComment   DiscussionComment @relation(fields: [discussionCommentId], references: [id], onDelete: Cascade)
+  discussionCommentId Int
+
+  userComment   UserComment @relation(fields: [userCommentId], references: [id], onDelete: Cascade)
+  userCommentId Int         @unique
+}
+
+model ProjectCommentFork {
+  id Int @id @default(autoincrement())
+
+  projectComment   ProjectComment @relation(fields: [projectCommentId], references: [id], onDelete: Cascade)
+  projectCommentId Int
+
+  userComment   UserComment @relation(fields: [userCommentId], references: [id], onDelete: Cascade)
+  userCommentId Int         @unique
+}
